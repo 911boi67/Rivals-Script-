@@ -293,7 +293,7 @@ function UIInvisibility:Enable()
     local espGUI = CoreGui:FindFirstChild("Nexus_ESP")
     if espGUI then
         self.OriginalProperties.espGUI = {
-            Enabled = espGUI.disabled
+            Enabled = espGUI.enabled
         }
         espGUI.Enabled = false
     end
