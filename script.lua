@@ -17,10 +17,10 @@ AdvanceTech.Settings = {
     Aimbot = { 
         Enabled = true, 
         TeamCheck = "FFA", 
-        FOV = 120, 
+        FOV = 500, 
         ShowFOVCircle = true, 
-        Smoothing = 10, 
-        ActivationDelay = 0.07, 
+        Smoothing = 4, 
+        ActivationDelay = 0, 
         ActivationKey = Enum.UserInputType.MouseButton2 
     }, 
     Privacy = { 
