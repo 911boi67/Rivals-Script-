@@ -1,112 +1,122 @@
 local Drawing = Drawing
 
--- Vape UI Library laden
-local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))()
+local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))() 
+local win = lib:Window("Danieljabdk Hub", Color3.fromRGB(44, 120, 224), Enum.KeyCode.P) 
+ 
+local Players = game:GetService("Players") 
+local RunService = game:GetService("RunService") 
+local UserInputService = game:GetService("UserInputService") 
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer 
+local Camera = workspace.CurrentCamera 
 
--- Fenster erstellen
-local win = lib:Window("W1lteGameYT Hub", Color3.fromRGB(44, 120, 224), Enum.KeyCode.RightAlt)
+-- ===================== ADVANCE TECH (AIMBOT) =====================
+local AdvanceTech = {} 
 
--- Services
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera
+AdvanceTech.Settings = { 
+    Aimbot = { 
+        Enabled = true, 
+        TeamCheck = "FFA", 
+        FOV = 500, 
+        ShowFOVCircle = true, 
+        Smoothing = 4, 
+        ActivationDelay = 0, 
+        ActivationKey = Enum.UserInputType.MouseButton2 
+    }, 
+    Privacy = { 
+        AntiSpectate = true 
+    } 
+} 
 
--- ===================== EINSTELLUNGEN =====================
-local Settings = {
-    Aimbot = {
-        Enabled = true,
-        TeamCheck = "FFA",
-        FOV = 500,
-        ShowFOVCircle = true,
-        Smoothing = 4,
-        ActivationDelay = 0,
-        ActivationKey = Enum.UserInputType.MouseButton2
-    },
-    ESP = {
-        Enabled = true,
-        Color = Color3.fromRGB(0, 255, 127)
-    },
-    AntiSpectate = false
+AdvanceTech.State = { 
+    Aimbot = { 
+        IsKeyDown = false, 
+        KeyDownTimestamp = 0 
+    }, 
+    Privacy = { 
+        OriginalTransparencies = {} 
+    }, 
+    UI = { 
+        IsVisible = true, 
+        FOVCircle = Drawing.new("Circle") 
+    } 
+} 
+
+function AdvanceTech:IsEnemy(player) 
+    if not player or player == LocalPlayer then return false end 
+    local check = self.Settings.Aimbot.TeamCheck 
+    if check == "FFA" or check == "Everyone" then return true end 
+    if check == "Team-Based" and player.Team ~= LocalPlayer.Team then return true end 
+    return false 
+end 
+
+function AdvanceTech:GetBestTarget() 
+    local bestTarget = nil 
+    local smallestMagnitude = self.Settings.Aimbot.FOV 
+    local mousePos = UserInputService:GetMouseLocation() 
+
+    for _, player in ipairs(Players:GetPlayers()) do 
+        local character = player.Character 
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid") 
+         
+        if self:IsEnemy(player) and character and humanoid and humanoid.Health > 0 then 
+            local targetPart = character:FindFirstChild("HumanoidRootPart") 
+             
+            if targetPart then 
+                local aimPosition = targetPart.Position 
+                local screenPos, onScreen = Camera:WorldToScreenPoint(aimPosition) 
+
+                if onScreen then 
+                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude 
+                    if distance < smallestMagnitude then 
+                        smallestMagnitude = distance 
+                        bestTarget = { AimPosition = aimPosition } 
+                    end 
+                end 
+            end 
+        end 
+    end 
+    return bestTarget 
+end 
+
+function AdvanceTech:RestoreAppearance() 
+    for part, transparency in pairs(self.State.Privacy.OriginalTransparencies) do 
+        if part and part.Parent then 
+            part.LocalTransparencyModifier = transparency 
+        end 
+    end 
+    self.State.Privacy.OriginalTransparencies = {} 
+end 
+
+function AdvanceTech:ApplyInvisibility() 
+    local character = LocalPlayer.Character 
+    if not character then return end 
+
+    for _, descendant in ipairs(character:GetDescendants()) do 
+        if descendant:IsA("BasePart") or descendant:IsA("Decal") then 
+            if not self.State.Privacy.OriginalTransparencies[descendant] then 
+                self.State.Privacy.OriginalTransparencies[descendant] = descendant.LocalTransparencyModifier 
+            end 
+            descendant.LocalTransparencyModifier = 1 
+        end 
+    end 
+end 
+
+-- ===================== ESP SYSTEM =====================
+local ESP = {
+    Enabled = true,
+    Color = Color3.fromRGB(0, 255, 127),
+    BG = Color3.fromRGB(15, 15, 15),
+    MenuVisible = true
 }
 
-local State = {
-    Aimbot = {
-        IsKeyDown = false,
-        KeyDownTimestamp = 0
-    },
-    FOVCircle = Drawing.new("Circle"),
-    OriginalTransparencies = {},
-    UIVisible = true  -- UI Sichtbarkeit
-}
-
--- ===================== HILFSFUNKTIONEN =====================
-local function IsEnemy(player)
+function ESP:IsEnemy(player)
     if not player or player == LocalPlayer then return false end
-    local check = Settings.Aimbot.TeamCheck
-    if check == "FFA" or check == "Everyone" then return true end
-    if check == "Team-Based" and player.Team ~= LocalPlayer.Team then return true end
-    return false
+    if player.Team ~= nil and player.Team == LocalPlayer.Team then return false end
+    return true
 end
 
-local function GetBestTarget()
-    local bestTarget = nil
-    local smallestMagnitude = Settings.Aimbot.FOV
-    local mousePos = UserInputService:GetMouseLocation()
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        local character = player.Character
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-
-        if IsEnemy(player) and character and humanoid and humanoid.Health > 0 then
-            local targetPart = character:FindFirstChild("HumanoidRootPart")
-
-            if targetPart then
-                local aimPosition = targetPart.Position
-                local screenPos, onScreen = Camera:WorldToScreenPoint(aimPosition)
-
-                if onScreen then
-                    local distance = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
-                    if distance < smallestMagnitude then
-                        smallestMagnitude = distance
-                        bestTarget = { AimPosition = aimPosition }
-                    end
-                end
-            end
-        end
-    end
-    return bestTarget
-end
-
--- ===================== ANTI-SPECTATE =====================
-local function RestoreAppearance()
-    for part, transparency in pairs(State.OriginalTransparencies) do
-        if part and part.Parent then
-            pcall(function()
-                part.LocalTransparencyModifier = transparency
-            end)
-        end
-    end
-    State.OriginalTransparencies = {}
-end
-
-local function ApplyInvisibility()
-    local character = LocalPlayer.Character
-    if not character then return end
-
-    for _, descendant in ipairs(character:GetDescendants()) do
-        if descendant:IsA("BasePart") or descendant:IsA("Decal") then
-            if not State.OriginalTransparencies[descendant] then
-                State.OriginalTransparencies[descendant] = descendant.LocalTransparencyModifier
-            end
-            descendant.LocalTransparencyModifier = 1
-        end
-    end
-end
-
--- ===================== ESP FUNKTIONEN =====================
-local function RemoveESPVisuals(character)
+function ESP:RemoveVisuals(character)
     if not character then return end
     local highlight = character:FindFirstChild("Nexus_HL")
     if highlight then highlight:Destroy() end
@@ -117,20 +127,20 @@ local function RemoveESPVisuals(character)
     end
 end
 
-local function ApplyESP(player)
+function ESP:ApplyVisuals(player)
     local character = player.Character
     if not character then return end
-    if not Settings.ESP.Enabled or not IsEnemy(player) then
-        RemoveESPVisuals(character)
+    if not self.Enabled or not self:IsEnemy(player) then
+        self:RemoveVisuals(character)
         return
     end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local head = character:FindFirstChild("Head")
     if not humanoid or humanoid.Health <= 0 then
-        RemoveESPVisuals(character)
+        self:RemoveVisuals(character)
         return
     end
-
+    
     -- Highlight
     local highlight = character:FindFirstChild("Nexus_HL")
     if not highlight then
@@ -138,11 +148,11 @@ local function ApplyESP(player)
         highlight.Name = "Nexus_HL"
         highlight.Parent = character
     end
-    highlight.FillColor = Settings.ESP.Color
+    highlight.FillColor = self.Color
     highlight.OutlineColor = Color3.new(1, 1, 1)
     highlight.FillTransparency = 0.5
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-
+    
     -- Name + HP Tag
     if head then
         local tag = head:FindFirstChild("Nexus_Tag")
@@ -167,142 +177,263 @@ local function ApplyESP(player)
     end
 end
 
--- ===================== UI ERSTELLEN =====================
--- Haupt-Tab
-local mainTab = win:Tab("Main")
-
--- Aimbot Section
-mainTab:Label("> AIMBOT")
-mainTab:Toggle("Aimbot aktivieren", Settings.Aimbot.Enabled, function(val)
-    Settings.Aimbot.Enabled = val
-end)
-mainTab:Slider("FOV Radius", 10, 500, Settings.Aimbot.FOV, false, function(val)
-    Settings.Aimbot.FOV = val
-end)
-mainTab:Slider("Smoothing", 1, 50, Settings.Aimbot.Smoothing, false, function(val)
-    Settings.Aimbot.Smoothing = val
-end)
-mainTab:Dropdown("Team Check", {"FFA", "Team-Based", "Everyone"}, function(val)
-    Settings.Aimbot.TeamCheck = val
-end)
-mainTab:Toggle("FOV Kreis anzeigen", Settings.Aimbot.ShowFOVCircle, function(val)
-    Settings.Aimbot.ShowFOVCircle = val
-end)
-mainTab:Label("Aktiviere mit rechter Maustaste")
-
--- ESP Section
-mainTab:Label("> ESP")
-mainTab:Toggle("ESP aktivieren", Settings.ESP.Enabled, function(val)
-    Settings.ESP.Enabled = val
-    if not val then
-        for _, player in ipairs(Players:GetPlayers()) do
-            if player.Character then RemoveESPVisuals(player.Character) end
-        end
+function ESP:BuildUI()
+    if CoreGui:FindFirstChild("Nexus_ESP") then
+        CoreGui.Nexus_ESP:Destroy()
     end
-end)
-mainTab:ColorPicker("ESP Farbe", Settings.ESP.Color, function(val)
-    Settings.ESP.Color = val
-end)
-
--- Anti-Spectate
-mainTab:Label("> PRIVATSPHÄRE")
-mainTab:Toggle("Anti-Spectate", Settings.AntiSpectate, function(val)
-    Settings.AntiSpectate = val
-    if not val then
-        RestoreAppearance()
-    end
-end)
-
--- ===================== FOV KREIS SETUP =====================
-local circle = State.FOVCircle
-circle.Visible = false
-circle.Thickness = 1
-circle.Color = Color3.fromRGB(255, 255, 255)
-circle.Filled = false
-circle.NumSides = 64
-circle.Transparency = 1
-circle.Radius = Settings.Aimbot.FOV
-
--- ===================== INPUT HANDLING =====================
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-
-    -- Aimbot Aktivierung
-    if input.UserInputType == Settings.Aimbot.ActivationKey then
-        State.Aimbot.IsKeyDown = true
-        State.Aimbot.KeyDownTimestamp = tick()
-    end
-
-    -- UI mit + Taste umschalten (NUR Sichtbarkeit, Funktionen bleiben an)
-    if input.KeyCode == Enum.KeyCode.Plus or input.KeyCode == Enum.KeyCode.Equals then
-        State.UIVisible = not State.UIVisible
-        -- UI unsichtbar machen aber Funktionen bleiben aktiv
-        local gui = lib:GetGUI()
-        if gui then
-            gui.Enabled = State.UIVisible
-        end
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Settings.Aimbot.ActivationKey then
-        State.Aimbot.IsKeyDown = false
-    end
-end)
-
--- Charakter-Entfernung aufräumen
-LocalPlayer.CharacterRemoving:Connect(function()
-    RestoreAppearance()
-end)
-
--- Spieler verlässt Spiel
-Players.PlayerRemoving:Connect(function(player)
-    if player.Character then RemoveESPVisuals(player.Character) end
-end)
-
--- ===================== RENDER LOOP =====================
-RunService:BindToRenderStep("MainRender", Enum.RenderPriority.Camera.Value + 1, function()
-    -- Anti-Spectate (funktioniert auch bei unsichtbarer UI)
-    if Settings.AntiSpectate then
-        ApplyInvisibility()
-    elseif next(State.OriginalTransparencies) ~= nil then
-        RestoreAppearance()
-    end
-
-    -- ESP Update (funktioniert auch bei unsichtbarer UI)
-    for _, player in ipairs(Players:GetPlayers()) do
-        ApplyESP(player)
-    end
-
-    -- Aimbot (funktioniert auch bei unsichtbarer UI)
-    local aimbot = Settings.Aimbot
-    local aimbotState = State.Aimbot
-
-    -- FOV Kreis aktualisieren (funktioniert auch bei unsichtbarer UI)
-    circle.Visible = aimbot.Enabled and aimbot.ShowFOVCircle and aimbotState.IsKeyDown
-    if circle.Visible then
-        circle.Position = UserInputService:GetMouseLocation()
-        circle.Radius = aimbot.FOV
-    end
-
-    -- Zielverfolgung (funktioniert auch bei unsichtbarer UI)
-    if aimbot.Enabled and aimbotState.IsKeyDown then
-        local target = GetBestTarget()
-        if target then
-            local targetScreenPos, onScreen = Camera:WorldToScreenPoint(target.AimPosition)
-            if onScreen then
-                local mousePos = UserInputService:GetMouseLocation()
-                local moveVector = Vector2.new(
-                    targetScreenPos.X - mousePos.X,
-                    targetScreenPos.Y - mousePos.Y
-                )
-                if mousemoverel then
-                    mousemoverel(
-                        moveVector.X / aimbot.Smoothing,
-                        moveVector.Y / aimbot.Smoothing
-                    )
-                end
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "Nexus_ESP"
+    gui.ResetOnSpawn = false
+    gui.Parent = CoreGui
+    
+    local menu = Instance.new("Frame")
+    menu.Size = UDim2.new(0, 230, 0, 140)
+    menu.Position = UDim2.new(0.5, -115, 0.2, 0)
+    menu.BackgroundColor3 = ESP.BG
+    menu.Parent = gui
+    Instance.new("UICorner", menu)
+    
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.Text = "PLAYER ESP"
+    title.TextColor3 = Color3.new(1, 1, 1)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.BackgroundTransparency = 1
+    title.Parent = menu
+    
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.85, 0, 0, 40)
+    button.Position = UDim2.new(0.075, 0, 0.4, 0)
+    button.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    button.Text = "ESP: OFF"
+    button.TextColor3 = Color3.fromRGB(160, 160, 160)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 14
+    button.Parent = menu
+    Instance.new("UICorner", button)
+    
+    button.MouseButton1Click:Connect(function()
+        ESP.Enabled = not ESP.Enabled
+        button.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
+        button.TextColor3 = ESP.Enabled and ESP.Color or Color3.fromRGB(160, 160, 160)
+        if not ESP.Enabled then
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player.Character then ESP:RemoveVisuals(player.Character) end
             end
         end
+    end)
+    
+    -- Drag menu
+    local dragging = false
+    local dragStart, startPosition
+    menu.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPosition = menu.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local delta = input.Position - dragStart
+            menu.Position = UDim2.new(
+                startPosition.X.Scale,
+                startPosition.X.Offset + delta.X,
+                startPosition.Y.Scale,
+                startPosition.Y.Offset + delta.Y
+            )
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+end
+
+-- ===================== UI MAIN TAB (Aimbot Settings) =====================
+local mainTab = win:Tab("Main") 
+mainTab:Label("> Aimbot / Target Lock") 
+mainTab:Toggle("Enable Aimbot", AdvanceTech.Settings.Aimbot.Enabled, function(val) AdvanceTech.Settings.Aimbot.Enabled = val end) 
+mainTab:Slider("FOV Radius", 10, 500, AdvanceTech.Settings.Aimbot.FOV, function(val) AdvanceTech.Settings.Aimbot.FOV = val end) 
+mainTab:Slider("Aim Smoothing", 1, 50, AdvanceTech.Settings.Aimbot.Smoothing, function(val) AdvanceTech.Settings.Aimbot.Smoothing = val end) 
+mainTab:Slider("Activation Delay", 0, 50, AdvanceTech.Settings.Aimbot.ActivationDelay * 100, function(val) AdvanceTech.Settings.Aimbot.ActivationDelay = val / 100 end) 
+mainTab:Dropdown("Team Check", {"FFA", "Team-Based", "Everyone"}, function(val) AdvanceTech.Settings.Aimbot.TeamCheck = val end) 
+mainTab:Toggle("Show FOV Circle", AdvanceTech.Settings.Aimbot.ShowFOVCircle, function(val) AdvanceTech.Settings.Aimbot.ShowFOVCircle = val end) 
+mainTab:Label("Hold Right-Click to Activate Aimbot.") 
+mainTab:Label("Targeting is locked to Body.") 
+
+-- ===================== UI INVISIBILITY TOGGLE =====================
+mainTab:Label("> UI Settings") 
+mainTab:Toggle("UI Invisibility (I)", false, function(val)
+    if val ~= UIInvisibility.Enabled then
+        UIInvisibility:Toggle()
     end
 end)
+
+-- ===================== UI INVISIBILITY SYSTEM =====================
+local UIInvisibility = {
+    Enabled = false,
+    ToggleKey = Enum.KeyCode.I,
+    OriginalProperties = {}
+}
+
+function UIInvisibility:Enable()
+    self.Enabled = true
+    
+    -- Hide main UI (Vape menu)
+    local mainFrame = win:GetUI()
+    if mainFrame then
+        self.OriginalProperties.mainFrame = {
+            Visible = mainFrame.Visible
+        }
+        mainFrame.Visible = false
+    end
+    
+    -- Hide ESP menu
+    local espGUI = CoreGui:FindFirstChild("Nexus_ESP")
+    if espGUI then
+        self.OriginalProperties.espGUI = {
+            Enabled = espGUI.disabled
+        }
+        espGUI.Enabled = false
+    end
+    
+    -- FOV Circle bleibt sichtbar!
+    -- Wir speichern nur den Zustand, aber verstecken ihn NICHT
+    local circle = AdvanceTech.State.UI.FOVCircle
+    if circle then
+        self.OriginalProperties.fovCircle = {
+            Visible = circle.Visible
+        }
+        -- FOV Circle bleibt sichtbar!
+    end
+end
+
+function UIInvisibility:Disable()
+    self.Enabled = false
+    
+    -- Restore main UI
+    if self.OriginalProperties.mainFrame then
+        local mainFrame = win:GetUI()
+        if mainFrame then
+            mainFrame.Visible = self.OriginalProperties.mainFrame.Visible
+        end
+    end
+    
+    -- Restore ESP menu
+    if self.OriginalProperties.espGUI then
+        local espGUI = CoreGui:FindFirstChild("Nexus_ESP")
+        if espGUI then
+            espGUI.Enabled = self.OriginalProperties.espGUI.Enabled
+        end
+    end
+    
+    -- FOV Circle bleibt unverändert
+    self.OriginalProperties = {}
+end
+
+function UIInvisibility:Toggle()
+    if self.Enabled then
+        self:Disable()
+    else
+        self:Enable()
+    end
+end
+
+-- ===================== FOV Circle Setup =====================
+local circle = AdvanceTech.State.UI.FOVCircle 
+circle.Visible = false 
+circle.Thickness = 1 
+circle.Color = Color3.fromRGB(255, 255, 255) 
+circle.Filled = false 
+circle.NumSides = 64 
+
+-- ===================== Input Handling =====================
+UserInputService.InputBegan:Connect(function(input, gpe) 
+    if gpe then return end 
+    -- Toggle main UI with RightAlt
+    if input.KeyCode == Enum.KeyCode.P then 
+        AdvanceTech.State.UI.IsVisible = not AdvanceTech.State.UI.IsVisible 
+        win:Toggle(AdvanceTech.State.UI.IsVisible)
+    end 
+    -- Toggle ESP menu with 0
+    if input.KeyCode == Enum.KeyCode.P then 
+        ESP.MenuVisible = not ESP.MenuVisible
+        local gui = CoreGui:FindFirstChild("Nexus_ESP")
+        if gui then gui.Enabled = ESP.MenuVisible end
+    end
+    -- Toggle UI Invisibility with I
+    if input.KeyCode == UIInvisibility.ToggleKey then 
+        UIInvisibility:Toggle()
+    end
+    -- Aimbot activation
+    if input.UserInputType == AdvanceTech.Settings.Aimbot.ActivationKey then 
+        AdvanceTech.State.Aimbot.IsKeyDown = true 
+        AdvanceTech.State.Aimbot.KeyDownTimestamp = tick() 
+    end 
+end) 
+
+UserInputService.InputEnded:Connect(function(input) 
+    if input.UserInputType == AdvanceTech.Settings.Aimbot.ActivationKey then 
+        AdvanceTech.State.Aimbot.IsKeyDown = false 
+    end 
+end) 
+
+-- ===================== Cleanup on Character Removal =====================
+LocalPlayer.CharacterRemoving:Connect(function() 
+    AdvanceTech:RestoreAppearance() 
+end) 
+
+-- ===================== Player Leave Cleanup (ESP) =====================
+Players.PlayerRemoving:Connect(function(player) 
+    if player.Character then ESP:RemoveVisuals(player.Character) end 
+end) 
+
+-- ===================== Render Loop (Combined) =====================
+RunService:BindToRenderStep("AdvanceTechRender", Enum.RenderPriority.Camera.Value + 1, function() 
+    -- Anti-Spectate
+    if AdvanceTech.Settings.Privacy.AntiSpectate then 
+        AdvanceTech:ApplyInvisibility() 
+    end 
+
+    -- ESP Update
+    for _, player in ipairs(Players:GetPlayers()) do 
+        ESP:ApplyVisuals(player) 
+    end 
+
+    -- Aim assist
+    local aimbot = AdvanceTech.Settings.Aimbot 
+    local aimbotState = AdvanceTech.State.Aimbot 
+
+    -- FOV Circle bleibt IMMER sichtbar, unabhängig von UI Invisibility
+    circle.Visible = aimbot.Enabled and aimbot.ShowFOVCircle and aimbotState.IsKeyDown
+    if circle.Visible then 
+        circle.Position = UserInputService:GetMouseLocation() 
+        circle.Radius = aimbot.FOV 
+    end 
+
+    if aimbot.Enabled and aimbotState.IsKeyDown and (tick() - aimbotState.KeyDownTimestamp > aimbot.ActivationDelay) then 
+        local target = AdvanceTech:GetBestTarget() 
+        if target then 
+            local targetScreenPos, onScreen = Camera:WorldToScreenPoint(target.AimPosition) 
+            if onScreen then 
+                local mousePos = UserInputService:GetMouseLocation() 
+                local moveVector = Vector2.new(targetScreenPos.X - mousePos.X, targetScreenPos.Y - mousePos.Y) 
+                if mousemoverel then 
+                    mousemoverel(moveVector.X / aimbot.Smoothing, moveVector.Y / aimbot.Smoothing) 
+                end 
+            end 
+        end 
+    end 
+end)
+
+-- ===================== Build ESP UI =====================
+ESP:BuildUI()
+
+-- ===================== KEYBIND INFO =====================
+print("=== Keybinds ===")
+print("P - Toggle Main UI")
+print("RightAlt - Toggle UI Visibility")
+print("0 - Toggle ESP Menu")
+print("I - Toggle UI Invisibility (FOV bleibt sichtbar)")
+print("Right Click - Activate Aimbot")
