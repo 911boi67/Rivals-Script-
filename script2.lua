@@ -181,49 +181,13 @@ function ESP:BuildUI()
     if CoreGui:FindFirstChild("Nexus_ESP") then
         CoreGui.Nexus_ESP:Destroy()
     end
+
     local gui = Instance.new("ScreenGui")
     gui.Name = "Nexus_ESP"
     gui.ResetOnSpawn = false
+    gui.Enabled = true
     gui.Parent = CoreGui
-    
-    local menu = Instance.new("Frame")
-    menu.Size = UDim2.new(0, 230, 0, 140)
-    menu.Position = UDim2.new(0.5, -115, 0.2, 0)
-    menu.BackgroundColor3 = ESP.BG
-    menu.Parent = gui
-    Instance.new("UICorner", menu)
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.Text = "PLAYER ESP"
-    title.TextColor3 = Color3.new(1, 1, 1)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 18
-    title.BackgroundTransparency = 1
-    title.Parent = menu
-    
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0.85, 0, 0, 40)
-    button.Position = UDim2.new(0.075, 0, 0.4, 0)
-    button.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    button.Text = "ESP: OFF"
-    button.TextColor3 = Color3.fromRGB(160, 160, 160)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 14
-    button.Parent = menu
-    Instance.new("UICorner", button)
-    
-    button.MouseButton1Click:Connect(function()
-        ESP.Enabled = not ESP.Enabled
-        button.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
-        button.TextColor3 = ESP.Enabled and ESP.Color or Color3.fromRGB(160, 160, 160)
-        if not ESP.Enabled then
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player.Character then ESP:RemoveVisuals(player.Character) end
-            end
-        end
-    end)
-    
+
     -- Drag menu
     local dragging = false
     local dragStart, startPosition
