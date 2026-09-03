@@ -1,4 +1,3 @@
-
 local Drawing = Drawing
 
 local lib = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/UI-Libs/main/Vape.txt"))() 
@@ -7,7 +6,6 @@ local win = lib:Window("W1lteGameYT Hub", Color3.fromRGB(44, 120, 224), Enum.Key
 local Players = game:GetService("Players") 
 local RunService = game:GetService("RunService") 
 local UserInputService = game:GetService("UserInputService") 
-local CoreGui = game:GetService("CoreGui")
 local LocalPlayer = Players.LocalPlayer 
 local Camera = workspace.CurrentCamera 
 
@@ -26,7 +24,11 @@ AdvanceTech.Settings = {
     }, 
     Privacy = { 
         AntiSpectate = true 
-    } 
+    },
+    ESP = {
+        Enabled = true,
+        Color = Color3.fromRGB(0, 255, 127)
+    }
 } 
 
 AdvanceTech.State = { 
@@ -103,21 +105,8 @@ function AdvanceTech:ApplyInvisibility()
     end 
 end 
 
--- ===================== ESP SYSTEM =====================
-local ESP = {
-    Enabled = true,
-    Color = Color3.fromRGB(0, 255, 127),
-    BG = Color3.fromRGB(15, 15, 15),
-    MenuVisible = true
-}
-
-function ESP:IsEnemy(player)
-    if not player or player == LocalPlayer then return false end
-    if player.Team ~= nil and player.Team == LocalPlayer.Team then return false end
-    return true
-end
-
-function ESP:RemoveVisuals(character)
+-- ===================== ESP FUNCTIONS (Direct Integration) =====================
+function AdvanceTech:RemoveESPVisuals(character)
     if not character then return end
     local highlight = character:FindFirstChild("Nexus_HL")
     if highlight then highlight:Destroy() end
@@ -128,17 +117,17 @@ function ESP:RemoveVisuals(character)
     end
 end
 
-function ESP:ApplyVisuals(player)
+function AdvanceTech:ApplyESP(player)
     local character = player.Character
     if not character then return end
-    if not self.Enabled or not self:IsEnemy(player) then
-        self:RemoveVisuals(character)
+    if not self.Settings.ESP.Enabled or not self:IsEnemy(player) then
+        self:RemoveESPVisuals(character)
         return
     end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local head = character:FindFirstChild("Head")
     if not humanoid or humanoid.Health <= 0 then
-        self:RemoveVisuals(character)
+        self:RemoveESPVisuals(character)
         return
     end
     
@@ -149,7 +138,7 @@ function ESP:ApplyVisuals(player)
         highlight.Name = "Nexus_HL"
         highlight.Parent = character
     end
-    highlight.FillColor = self.Color
+    highlight.FillColor = self.Settings.ESP.Color
     highlight.OutlineColor = Color3.new(1, 1, 1)
     highlight.FillTransparency = 0.5
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
@@ -178,81 +167,10 @@ function ESP:ApplyVisuals(player)
     end
 end
 
-function ESP:BuildUI()
-    if CoreGui:FindFirstChild("Nexus_ESP") then
-        CoreGui.Nexus_ESP:Destroy()
-    end
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "Nexus_ESP"
-    gui.ResetOnSpawn = false
-    gui.Parent = CoreGui
-    
-    local menu = Instance.new("Frame")
-    menu.Size = UDim2.new(0, 230, 0, 140)
-    menu.Position = UDim2.new(0.5, -115, 0.2, 0)
-    menu.BackgroundColor3 = ESP.BG
-    menu.Parent = gui
-    Instance.new("UICorner", menu)
-    
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.Text = "PLAYER ESP"
-    title.TextColor3 = Color3.new(1, 1, 1)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 18
-    title.BackgroundTransparency = 1
-    title.Parent = menu
-    
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0.85, 0, 0, 40)
-    button.Position = UDim2.new(0.075, 0, 0.4, 0)
-    button.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    button.Text = "ESP: OFF"
-    button.TextColor3 = Color3.fromRGB(160, 160, 160)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 14
-    button.Parent = menu
-    Instance.new("UICorner", button)
-    
-    button.MouseButton1Click:Connect(function()
-        ESP.Enabled = not ESP.Enabled
-        button.Text = ESP.Enabled and "ESP: ON" or "ESP: OFF"
-        button.TextColor3 = ESP.Enabled and ESP.Color or Color3.fromRGB(160, 160, 160)
-        if not ESP.Enabled then
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player.Character then ESP:RemoveVisuals(player.Character) end
-            end
-        end
-    end)
-    
-    -- Drag menu
-    local dragging = false
-    local dragStart, startPosition
-    menu.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPosition = menu.Position
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            menu.Position = UDim2.new(
-                startPosition.X.Scale,
-                startPosition.X.Offset + delta.X,
-                startPosition.Y.Scale,
-                startPosition.Y.Offset + delta.Y
-            )
-        end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
-    end)
-end
-
--- ===================== UI MAIN TAB (Aimbot Settings) =====================
+-- ===================== UI MAIN TAB (Aimbot + ESP Settings) =====================
 local mainTab = win:Tab("Main") 
+
+-- Aimbot Section
 mainTab:Label("> Aimbot / Target Lock") 
 mainTab:Toggle("Enable Aimbot", AdvanceTech.Settings.Aimbot.Enabled, function(val) AdvanceTech.Settings.Aimbot.Enabled = val end) 
 mainTab:Slider("FOV Radius", 10, 500, AdvanceTech.Settings.Aimbot.FOV, function(val) AdvanceTech.Settings.Aimbot.FOV = val end) 
@@ -262,6 +180,28 @@ mainTab:Dropdown("Team Check", {"FFA", "Team-Based", "Everyone"}, function(val) 
 mainTab:Toggle("Show FOV Circle", AdvanceTech.Settings.Aimbot.ShowFOVCircle, function(val) AdvanceTech.Settings.Aimbot.ShowFOVCircle = val end) 
 mainTab:Label("Hold Right-Click to Activate Aimbot.") 
 mainTab:Label("Targeting is locked to Body.") 
+
+-- ESP Section (Direkt eingebaut)
+mainTab:Label(" ") 
+mainTab:Label("> Player ESP") 
+mainTab:Toggle("Enable ESP", AdvanceTech.Settings.ESP.Enabled, function(val) 
+    AdvanceTech.Settings.ESP.Enabled = val
+    if not val then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player.Character then AdvanceTech:RemoveESPVisuals(player.Character) end
+        end
+    end
+end) 
+mainTab:ColorPicker("ESP Color", AdvanceTech.Settings.ESP.Color, function(val) 
+    AdvanceTech.Settings.ESP.Color = val
+end) 
+mainTab:Toggle("Anti-Spectate", AdvanceTech.Settings.Privacy.AntiSpectate, function(val) 
+    AdvanceTech.Settings.Privacy.AntiSpectate = val
+    if not val then
+        AdvanceTech:RestoreAppearance()
+    end
+end) 
+mainTab:Label("Press ZERO key to toggle ESP visibility (if needed).") 
 
 -- ===================== FOV Circle Setup =====================
 local circle = AdvanceTech.State.UI.FOVCircle 
@@ -279,12 +219,6 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         AdvanceTech.State.UI.IsVisible = not AdvanceTech.State.UI.IsVisible 
         win:Toggle(AdvanceTech.State.UI.IsVisible)
     end 
-    -- Toggle ESP menu with 0
-    if input.KeyCode == Enum.KeyCode.Zero then 
-        ESP.MenuVisible = not ESP.MenuVisible
-        local gui = CoreGui:FindFirstChild("Nexus_ESP")
-        if gui then gui.Enabled = ESP.MenuVisible end
-    end
     -- Aimbot activation
     if input.UserInputType == AdvanceTech.Settings.Aimbot.ActivationKey then 
         AdvanceTech.State.Aimbot.IsKeyDown = true 
@@ -305,7 +239,7 @@ end)
 
 -- ===================== Player Leave Cleanup (ESP) =====================
 Players.PlayerRemoving:Connect(function(player) 
-    if player.Character then ESP:RemoveVisuals(player.Character) end 
+    if player.Character then AdvanceTech:RemoveESPVisuals(player.Character) end 
 end) 
 
 -- ===================== Render Loop (Combined) =====================
@@ -315,9 +249,9 @@ RunService:BindToRenderStep("AdvanceTechRender", Enum.RenderPriority.Camera.Valu
         AdvanceTech:ApplyInvisibility() 
     end 
 
-    -- ESP Update
+    -- ESP Update (Alle Spieler)
     for _, player in ipairs(Players:GetPlayers()) do 
-        ESP:ApplyVisuals(player) 
+        AdvanceTech:ApplyESP(player) 
     end 
 
     -- Aim assist
@@ -344,6 +278,3 @@ RunService:BindToRenderStep("AdvanceTechRender", Enum.RenderPriority.Camera.Valu
         end 
     end 
 end)
-
--- ===================== Build ESP UI =====================
-ESP:BuildUI()
