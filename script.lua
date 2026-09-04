@@ -130,39 +130,46 @@ end
 function ESP:ApplyVisuals(player)
     local character = player.Character
     if not character then return end
+
     if not self.Enabled or not self:IsEnemy(player) then
         self:RemoveVisuals(character)
         return
     end
+
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local head = character:FindFirstChild("Head")
+
     if not humanoid or humanoid.Health <= 0 then
         self:RemoveVisuals(character)
         return
     end
-    
+
     -- Highlight
     local highlight = character:FindFirstChild("Nexus_HL")
+
     if not highlight then
         highlight = Instance.new("Highlight")
         highlight.Name = "Nexus_HL"
         highlight.Parent = character
     end
+
     highlight.FillColor = self.Color
     highlight.OutlineColor = Color3.new(0, 0, 1)
     highlight.FillTransparency = 0.5
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    
-    -- Name + HP Tag
+
+    -- HP Tag
     if head then
         local tag = head:FindFirstChild("Nexus_Tag")
+
         if not tag then
             tag = Instance.new("BillboardGui")
             tag.Name = "Nexus_Tag"
-            tag.Size = UDim2.new(0, 320, 0, 150)
+            tag.Size = UDim2.new(0, 200, 0, 50)
             tag.StudsOffset = Vector3.new(0, 2.5, 0)
             tag.AlwaysOnTop = true
             tag.Parent = head
+
             local label = Instance.new("TextLabel")
             label.Name = "Info"
             label.Size = UDim2.new(1, 0, 1, 0)
@@ -173,7 +180,26 @@ function ESP:ApplyVisuals(player)
             label.TextSize = 24
             label.Parent = tag
         end
-        tag.Info.Text = player.Name .. "\nHP: " .. math.floor(humanoid.Health)
+
+        -- HP direkt aktualisieren
+        tag.Info.Text = "HP: " .. math.floor(humanoid.Health)
+
+        -- HealthChanged nur einmal verbinden
+        if not humanoid:GetAttribute("Nexus_HPConnection") then
+            humanoid:SetAttribute("Nexus_HPConnection", true)
+
+            humanoid.HealthChanged:Connect(function(health)
+                local currentHead = character:FindFirstChild("Head")
+
+                if currentHead then
+                    local currentTag = currentHead:FindFirstChild("Nexus_Tag")
+
+                    if currentTag and currentTag:FindFirstChild("Info") then
+                        currentTag.Info.Text = "HP: " .. math.floor(health)
+                    end
+                end
+            end)
+        end
     end
 end
 
