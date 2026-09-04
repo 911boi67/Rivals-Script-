@@ -149,7 +149,7 @@ function ESP:ApplyVisuals(player)
         highlight.Parent = character
     end
     highlight.FillColor = self.Color
-    highlight.OutlineColor = Color3.new(1, 1, 1)
+    highlight.OutlineColor = Color3.new(0, 0, 1)
     highlight.FillTransparency = 0.5
     highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     
@@ -159,7 +159,7 @@ function ESP:ApplyVisuals(player)
         if not tag then
             tag = Instance.new("BillboardGui")
             tag.Name = "Nexus_Tag"
-            tag.Size = UDim2.new(0, 120, 0, 40)
+            tag.Size = UDim2.new(0, 320, 0, 150)
             tag.StudsOffset = Vector3.new(0, 2.5, 0)
             tag.AlwaysOnTop = true
             tag.Parent = head
@@ -167,10 +167,10 @@ function ESP:ApplyVisuals(player)
             label.Name = "Info"
             label.Size = UDim2.new(1, 0, 1, 0)
             label.BackgroundTransparency = 1
-            label.TextColor3 = Color3.new(1, 1, 1)
+            label.TextColor3 = Color3.new(1, 0, 0)
             label.TextStrokeTransparency = 0.4
             label.Font = Enum.Font.GothamBold
-            label.TextSize = 12
+            label.TextSize = 24
             label.Parent = tag
         end
         tag.Info.Text = player.Name .. "\nHP: " .. math.floor(humanoid.Health)
